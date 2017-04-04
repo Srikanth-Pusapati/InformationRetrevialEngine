@@ -8,10 +8,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Scanner;
 import java.util.TreeMap;
 
 public class ReadInputFiles {
@@ -24,14 +28,21 @@ public class ReadInputFiles {
 	private List<String> stopList;
 	private String line;
 	private int index, counter;
-	private Map<Integer, String> wordDict;
-	private Map<Integer, String> fileDict;
+	private Map<String, Integer> wordDict;
+	private Map<String, Integer> fileDict;
 	private Porter porter;
-	// private TreeSet<String> sortedTokens;
 	private String stemmedWord;
-	// private Iterator<Entry<String, Map<String, Integer>>> mapIt;
-	private Map<String, Map<String, Integer>> frwdIndex;
-	private Map<String, Integer> termIndex;
+	// Map<DocID,<WordId,FreqCount>>
+	private Map<Integer, Map<Integer, Integer>> frwdIndex;
+	// Map <wordId,FreqCount>
+	private Map<Integer, Integer> termIndex;
+	private int wordId;
+	private int docId;
+
+	// wordID - docId - freqCount
+	private Map<Integer, Map<Integer, Integer>> invertedIndex;
+	// docId, freqCount
+	private Map<Integer, Integer> docIndex;
 
 	public ReadInputFiles() {
 		super();
@@ -42,34 +53,64 @@ public class ReadInputFiles {
 		wordDict = new TreeMap<>();
 		fileDict = new HashMap<>();
 		porter = new Porter();
-		// sortedTokens = new TreeSet<>(Collator.getInstance());
-		// forwardIndex = new HashMap<>();
 		frwdIndex = new HashMap<>();
-		termIndex = new TreeMap<>();
+		invertedIndex = new HashMap<>();
 
 	}
 
 	// Test
 	public static void main(String args[]) {
-		System.out.println("Started at " + new Timestamp(System.currentTimeMillis()));
+		Timestamp inTime = new Timestamp(System.currentTimeMillis());
+		System.out.println("Started at " + inTime);
 		ReadInputFiles readInputFiles = new ReadInputFiles();
-		if (readInputFiles.stopList.isEmpty()) {
-			readInputFiles.stopList = readInputFiles.loadStopList();
-		}
-		readInputFiles.loadData();
-		// readInputFiles.mapIt =
-		// readInputFiles.frwdIndex.entrySet().iterator();
-		//
-		// while (readInputFiles.mapIt.hasNext()) {
-		// System.out.println(readInputFiles.mapIt.next());
-		// }
-		// for (String string : readInputFiles.sortedTokens) {
-		// if (!string.isEmpty()) {
-		// readInputFiles.wordDict.put(++readInputFiles.index, string);
-		// }
-		// }
+
+		readInputFiles.loadStopList("./src/stopwordlist.txt");
+
+		readInputFiles.loadData("./src/ft911/");
 		readInputFiles.writeToFile(readInputFiles);
-		System.out.println("Completed at " + new Timestamp(System.currentTimeMillis()));
+		System.out.println("size of forward Index is " + readInputFiles.frwdIndex.size());
+		System.out.println("size of Inverted Index is " + readInputFiles.invertedIndex.size());
+		Timestamp outTime = new Timestamp(System.currentTimeMillis());
+		Long dur = (outTime.getTime() - inTime.getTime()) / 1000;
+		System.out.println("Completed at " + outTime + " duration is around " + dur + " seconds");
+
+	}
+
+	public void readinputFromUser(ReadInputFiles readInputFiles) {
+
+		Scanner scanner = new Scanner(System.in);
+		System.out.print("Enter your word to search: ");
+		String searchTerm = scanner.nextLine().toLowerCase();
+		scanner.close();
+		if (!searchTerm.isEmpty()
+				&& searchTerm.contentEquals(searchTerm.toLowerCase().replaceAll("\\w*\\d\\w*", "").trim())
+				&& !stopList.contains(searchTerm)) {
+			searchTerm = porter.stripAffixes(searchTerm);
+			if (readInputFiles.wordDict.containsKey(searchTerm)) {
+				wordId = readInputFiles.wordDict.get(searchTerm);
+				System.out.println("The entered search after stemming is valid");
+
+				// WordId : DocId : FreqCount
+				for (Map.Entry<Integer, Map<Integer, Integer>> wordEntry : readInputFiles.invertedIndex.entrySet()) {
+					if (wordEntry.getKey() == wordId) {
+						for (Map.Entry<Integer, Integer> docEntry : wordEntry.getValue().entrySet()) {
+							for (Map.Entry<String, Integer> fileEntry : readInputFiles.fileDict.entrySet()) {
+								if (docEntry.getKey().equals(fileEntry.getValue())) {
+									System.out.println("The document the word after stemming " + searchTerm
+											+ " is present in " + fileEntry.getKey() + " and freq. count is "
+											+ docEntry.getValue());
+								}
+							}
+						}
+					}
+				}
+
+			} else {
+				System.out.println("Entered word after stemming " + searchTerm + " is not present in the document");
+			}
+		} else {
+			System.out.println("The entered Search term is invalid or is a stop list word.");
+		}
 
 	}
 
@@ -78,8 +119,8 @@ public class ReadInputFiles {
 		try {
 			writer = new BufferedWriter(new FileWriter("./parser_output.txt"));
 
-			readInputFiles.writeContent(readInputFiles.wordDict, writer);
-			readInputFiles.writeContent(readInputFiles.fileDict, writer);
+			readInputFiles.writeContent(readInputFiles.wordDict, writer, false);
+			readInputFiles.writeContent(readInputFiles.fileDict, writer, true);
 
 			writer.flush();
 			writer.close();
@@ -96,16 +137,32 @@ public class ReadInputFiles {
 	 * @param writer
 	 *            buffered writer object.
 	 */
-	private void writeContent(Map<Integer, String> mapToPrint, BufferedWriter writer) {
+	private void writeContent(final Map<String, Integer> mapToPrint, final BufferedWriter writer, final boolean check) {
 
 		try {
-			writer.write("-------------------------------------------");
-			writer.newLine();
-			for (Entry<Integer, String> entry : mapToPrint.entrySet()) {
-				writer.write(entry.getValue() + " " + entry.getKey());
+			if (check) {
+				List<Map.Entry<String, Integer>> list = new LinkedList<>(mapToPrint.entrySet());
+				Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
+					@Override
+					public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+						return (o1.getValue()).compareTo(o2.getValue());
+					}
+				});
+				for (Map.Entry<String, Integer> entry : list) {
+					writer.write(entry.getKey() + " " + entry.getValue());
+					writer.newLine();
+				}
+			} else {
+				for (Entry<String, Integer> entry : mapToPrint.entrySet()) {
+					writer.write(entry.getKey() + " " + entry.getValue());
+					writer.newLine();
+				}
+				writer.write("-------------------------------------------");
 				writer.newLine();
 			}
-		} catch (IOException e) {
+		} catch (
+
+		IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -114,8 +171,8 @@ public class ReadInputFiles {
 	 * 
 	 * Method call to load all the files
 	 */
-	public void loadData() {
-		List<String> filesList = loadFiles("./src/ft911/");
+	public void loadData(String filePath) {
+		List<String> filesList = loadFiles(filePath);
 
 		for (String fileName : filesList) {
 			processFileContent(fileName);
@@ -145,10 +202,10 @@ public class ReadInputFiles {
 	 * 
 	 * @return list containing the stop words
 	 */
-	private List<String> loadStopList() {
+	public void loadStopList(final String stopListPath) {
 		BufferedReader reader = null;
 		try {
-			reader = new BufferedReader(new FileReader("./src/stopwordlist.txt"));
+			reader = new BufferedReader(new FileReader(stopListPath));
 			while ((line = reader.readLine()) != null) {
 				stopList.add(line.trim());
 			}
@@ -158,7 +215,6 @@ public class ReadInputFiles {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return stopList;
 	}
 
 	/**
@@ -167,11 +223,10 @@ public class ReadInputFiles {
 	 * @param fileToRead
 	 * @return list containing the data.
 	 */
-	private void processFileContent(String fileToRead) {
+	private void processFileContent(final String fileToRead) {
 		BufferedReader bufferedReader = null;
 		String docNumber = null;
 		String textLine = null;
-		// List<ReadInputDatatype> readinputDataList = new ArrayList<>();
 
 		try {
 			bufferedReader = new BufferedReader(new FileReader(fileToRead));
@@ -179,34 +234,63 @@ public class ReadInputFiles {
 				if (line.contains(DOC_START_TAG)) {
 					docNumber = line.substring(line.indexOf(DOC_START_TAG) + DOC_START_TAG.length(),
 							line.indexOf(DOC_END_TAG));
-					fileDict.put(++counter, docNumber);
+					fileDict.put(docNumber, ++counter);
 
 				} else if (line.contains(TEXT_START_TAG)) {
-					termIndex = new HashMap<>();
-
+					termIndex = new TreeMap<>();
 					while (!(textLine = bufferedReader.readLine()).contains(TEXT_END_TAG)) {
 						for (String token : textLine.toLowerCase().replaceAll("\\w*\\d\\w*", "").trim()
 								.split("\\s*[^a-z]\\s*")) {
 							if (!token.isEmpty() && !stopList.contains(token)) {
 								stemmedWord = porter.stripAffixes(token.trim());
-								// sortedTokens.add(stemmedWord);
-								wordDict.put(++index, stemmedWord);
-								// Doc 1 - cow 2; moon 4; sum 10;
-								// inside Doc 1
-								if (!termIndex.isEmpty() && termIndex.containsKey(stemmedWord)) {
+								if (!stemmedWord.isEmpty()) {
+									if (!wordDict.containsKey(stemmedWord)) {
+										wordDict.put(stemmedWord, ++index);
 
-									termIndex.put(stemmedWord, termIndex.get(stemmedWord) + 1);
-								} else {
-									termIndex.put(stemmedWord, 1);
+									}
+									// forward Index DocId - WordId - freqCount
+									// getting the wordId
+									wordId = wordDict.get(stemmedWord);
+									// check if wordId already exists in the
+									// term dictionary. if present increase the
+									// count, else create a new entry in the
+									// term.
+									if (!termIndex.isEmpty() && termIndex.containsKey(wordId)) {
+										termIndex.put(wordId, termIndex.get(wordId) + 1);
+									} else {
+										termIndex.put(wordId, 1);
+									}
+
+									// Inverted Index wordID - docId -freqCount
+									docId = fileDict.get(docNumber);
+									docIndex = new TreeMap<>();
+
+									// check if the inverted index has the word.
+									// if it contains then update the document
+									// index.
+									// else insert the new document index.
+									if (invertedIndex.containsKey(wordId)) {
+										docIndex = invertedIndex.get(wordId);
+										if (docIndex.containsKey(docId)) {
+											docIndex.put(docId, docIndex.get(docId) + 1);
+										} else {
+											docIndex.put(docId, 1);
+										}
+										invertedIndex.put(wordId, docIndex);
+
+									} else {
+										if (docIndex.isEmpty()) {
+											docIndex.put(docId, 1);
+										}
+										invertedIndex.put(wordId, docIndex);
+									}
 								}
-
 							}
 						}
 					}
 
 					if (!frwdIndex.containsKey(docNumber)) {
-
-						frwdIndex.put(docNumber, termIndex);
+						frwdIndex.put(fileDict.get(docNumber), termIndex);
 					}
 				}
 
@@ -224,5 +308,6 @@ public class ReadInputFiles {
 			}
 		}
 	}
+
 
 }
