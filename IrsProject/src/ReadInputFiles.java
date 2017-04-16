@@ -18,7 +18,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.TreeMap;
 
-public class ReadInputFiles {
+public class ReadInputFiles implements InformationRetrivealInterface {
 
 	private static final String DOC_END_TAG = "</DOCNO>";
 	private static final String DOC_START_TAG = "<DOCNO>";
@@ -68,6 +68,7 @@ public class ReadInputFiles {
 
 		readInputFiles.loadData("./src/ft911/");
 		readInputFiles.writeToFile(readInputFiles);
+		readInputFiles.writeIndexToFile(readInputFiles);
 		System.out.println("size of forward Index is " + readInputFiles.frwdIndex.size());
 		System.out.println("size of Inverted Index is " + readInputFiles.invertedIndex.size());
 		Timestamp outTime = new Timestamp(System.currentTimeMillis());
@@ -76,12 +77,53 @@ public class ReadInputFiles {
 
 	}
 
-	public void readinputFromUser(ReadInputFiles readInputFiles) {
+	private void writeIndexToFile(final ReadInputFiles readInputFiles) {
+		BufferedWriter writer = null;
+		try {
+			writer = new BufferedWriter(new FileWriter("./forwardIndexoutput.txt"));
 
-		Scanner scanner = new Scanner(System.in);
+			readInputFiles.writeIndexToFile(readInputFiles.frwdIndex, writer);
+			writer.flush();
+			writer.close();
+
+			writer = new BufferedWriter(new FileWriter("./InverseIndexoutput.txt"));
+
+			readInputFiles.writeIndexToFile(readInputFiles.invertedIndex, writer);
+			writer.flush();
+			writer.close();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private void writeIndexToFile(final Map<Integer, Map<Integer, Integer>> invertedIndex,
+			final BufferedWriter writer) {
+
+		try {
+			for (Entry<Integer, Map<Integer, Integer>> entry : invertedIndex.entrySet()) {
+				writer.write(entry.getKey() + " " + entry.getValue());
+				writer.newLine();
+			}
+			writer.write("-------------------------------------------");
+			writer.newLine();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see InformationRetrivealInterface#readInputFromUser(ReadInputFiles,
+	 * java.util.Scanner)
+	 */
+	public void readInputFromUser(final ReadInputFiles readInputFiles, final Scanner scanner) {
+
 		System.out.print("Enter your word to search: ");
 		String searchTerm = scanner.nextLine().toLowerCase();
-		scanner.close();
 		if (!searchTerm.isEmpty()
 				&& searchTerm.contentEquals(searchTerm.toLowerCase().replaceAll("\\w*\\d\\w*", "").trim())
 				&& !stopList.contains(searchTerm)) {
@@ -114,7 +156,13 @@ public class ReadInputFiles {
 
 	}
 
-	private void writeToFile(ReadInputFiles readInputFiles) {
+	/**
+	 * write word dictionary and file dictionary to a file.
+	 * 
+	 * @param readInputFiles
+	 *            class object to retrieve the final dictionary objects.
+	 */
+	private void writeToFile(final ReadInputFiles readInputFiles) {
 		BufferedWriter writer = null;
 		try {
 			writer = new BufferedWriter(new FileWriter("./parser_output.txt"));
@@ -140,6 +188,7 @@ public class ReadInputFiles {
 	private void writeContent(final Map<String, Integer> mapToPrint, final BufferedWriter writer, final boolean check) {
 
 		try {
+			// checking if we need to sort the map and print the content.
 			if (check) {
 				List<Map.Entry<String, Integer>> list = new LinkedList<>(mapToPrint.entrySet());
 				Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
@@ -167,11 +216,13 @@ public class ReadInputFiles {
 		}
 	}
 
-	/**
+	/*
+	 * (non-Javadoc)
 	 * 
-	 * Method call to load all the files
+	 * @see InformationRetrivealInterface#loadData(java.lang.String)
 	 */
-	public void loadData(String filePath) {
+	@Override
+	public void loadData(final String filePath) {
 		List<String> filesList = loadFiles(filePath);
 
 		for (String fileName : filesList) {
@@ -200,8 +251,10 @@ public class ReadInputFiles {
 
 	/**
 	 * 
-	 * @return list containing the stop words
+	 * @param stopListPath
+	 *            path to the stop words
 	 */
+	@Override
 	public void loadStopList(final String stopListPath) {
 		BufferedReader reader = null;
 		try {
@@ -221,7 +274,8 @@ public class ReadInputFiles {
 	 * Method to process the file content.
 	 * 
 	 * @param fileToRead
-	 * @return list containing the data.
+	 *            file to parse.
+	 * 
 	 */
 	private void processFileContent(final String fileToRead) {
 		BufferedReader bufferedReader = null;
@@ -308,6 +362,5 @@ public class ReadInputFiles {
 			}
 		}
 	}
-
 
 }

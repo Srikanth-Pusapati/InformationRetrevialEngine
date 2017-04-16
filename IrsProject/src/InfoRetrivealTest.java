@@ -12,19 +12,20 @@ public class InfoRetrivealTest {
 
 		readInputFiles.loadStopList("./src/stopwordlist.txt");
 
-		String dataPath = new InfoRetrivealTest().readPath();
+		Scanner scanner = new Scanner(System.in);
+
+		String dataPath = new InfoRetrivealTest().readPath(scanner);
 		System.out.println("Parsing the new content");
 
 		readInputFiles.loadData(dataPath);
-		readInputFiles.readinputFromUser(readInputFiles);
+		readInputFiles.readInputFromUser(readInputFiles, scanner);
+		scanner.close();
 
 	}
 
-	private String readPath() {
-		Scanner scanner = new Scanner(System.in);
+	private String readPath(final Scanner scanner) {
 		System.out.print("Enter your Source files Path to parse: ");
 		String parsePath = scanner.nextLine();
-
 		return parsePath;
 	}
 
