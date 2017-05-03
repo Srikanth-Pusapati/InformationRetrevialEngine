@@ -1,4 +1,4 @@
-import java.util.Scanner;
+import java.util.List;
 
 /**
  * 
@@ -14,8 +14,9 @@ public interface InformationRetrivealInterface {
 	 * 
 	 * @param stopListpath
 	 *            path to the stop list.
+	 * @return 
 	 */
-	public void loadStopList(final String stopListpath);
+	public List<String> loadStopList(final String stopListpath);
 
 	/**
 	 * Method to parse the content; build the file, word dictionaries and
@@ -31,8 +32,8 @@ public interface InformationRetrivealInterface {
 	 * word.
 	 * 
 	 * @param readInputFiles
-	 * @param scanner
+	 * @param searchTerm
 	 */
-	public void readInputFromUser(final ReadInputFiles readInputFiles, final Scanner scanner);
+	public void readInputFromUser(final ReadInputFiles readInputFiles, final String searchTerm);
 
 }

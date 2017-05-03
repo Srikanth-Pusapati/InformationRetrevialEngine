@@ -15,7 +15,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Scanner;
 import java.util.TreeMap;
 
 public class ReadInputFiles implements InformationRetrivealInterface {
@@ -58,13 +57,103 @@ public class ReadInputFiles implements InformationRetrivealInterface {
 
 	}
 
+	/**
+	 * @return the stopList
+	 */
+	public List<String> getStopList() {
+		return stopList;
+	}
+
+	/**
+	 * @param stopList
+	 *            the stopList to set
+	 */
+	public void setStopList(List<String> stopList) {
+		this.stopList = stopList;
+	}
+
+	/**
+	 * @param wordDict
+	 *            the wordDict to set
+	 */
+	public void setWordDict(Map<String, Integer> wordDict) {
+		this.wordDict = wordDict;
+	}
+
+	/**
+	 * @return the wordDict
+	 */
+	public Map<String, Integer> getWordDict() {
+		return wordDict;
+	}
+
+	/**
+	 * @return the index
+	 */
+	public int getIndex() {
+		return index;
+	}
+
+	/**
+	 * @param index
+	 *            the index to set
+	 */
+	public void setIndex(int index) {
+		this.index = index;
+	}
+
+	/**
+	 * @return the fileDict
+	 */
+	public Map<String, Integer> getFileDict() {
+		return fileDict;
+	}
+
+	/**
+	 * @param fileDict
+	 *            the fileDict to set
+	 */
+	public void setFileDict(Map<String, Integer> fileDict) {
+		this.fileDict = fileDict;
+	}
+
+	/**
+	 * @return the frwdIndex
+	 */
+	public Map<Integer, Map<Integer, Integer>> getFrwdIndex() {
+		return frwdIndex;
+	}
+
+	/**
+	 * @return the invertedIndex
+	 */
+	public Map<Integer, Map<Integer, Integer>> getInvertedIndex() {
+		return invertedIndex;
+	}
+
+	/**
+	 * @param frwdIndex
+	 *            the frwdIndex to set
+	 */
+	public void setFrwdIndex(Map<Integer, Map<Integer, Integer>> frwdIndex) {
+		this.frwdIndex = frwdIndex;
+	}
+
+	/**
+	 * @param invertedIndex
+	 *            the invertedIndex to set
+	 */
+	public void setInvertedIndex(Map<Integer, Map<Integer, Integer>> invertedIndex) {
+		this.invertedIndex = invertedIndex;
+	}
+
 	// Test
 	public static void main(String args[]) {
 		Timestamp inTime = new Timestamp(System.currentTimeMillis());
 		System.out.println("Started at " + inTime);
 		ReadInputFiles readInputFiles = new ReadInputFiles();
 
-		readInputFiles.loadStopList("./src/stopwordlist.txt");
+		readInputFiles.setStopList(readInputFiles.loadStopList("./src/stopwordlist.txt"));
 
 		readInputFiles.loadData("./src/ft911/");
 		readInputFiles.writeToFile(readInputFiles);
@@ -120,10 +209,10 @@ public class ReadInputFiles implements InformationRetrivealInterface {
 	 * @see InformationRetrivealInterface#readInputFromUser(ReadInputFiles,
 	 * java.util.Scanner)
 	 */
-	public void readInputFromUser(final ReadInputFiles readInputFiles, final Scanner scanner) {
+	public void readInputFromUser(final ReadInputFiles readInputFiles, String searchTerm) {
 
-		System.out.print("Enter your word to search: ");
-		String searchTerm = scanner.nextLine().toLowerCase();
+		// String searchTerm = term.toLowerCase();
+		searchTerm = searchTerm.toLowerCase().trim();
 		if (!searchTerm.isEmpty()
 				&& searchTerm.contentEquals(searchTerm.toLowerCase().replaceAll("\\w*\\d\\w*", "").trim())
 				&& !stopList.contains(searchTerm)) {
@@ -133,10 +222,10 @@ public class ReadInputFiles implements InformationRetrivealInterface {
 				System.out.println("The entered search after stemming is valid");
 
 				// WordId : DocId : FreqCount
-				for (Map.Entry<Integer, Map<Integer, Integer>> wordEntry : readInputFiles.invertedIndex.entrySet()) {
+				for (Entry<Integer, Map<Integer, Integer>> wordEntry : readInputFiles.invertedIndex.entrySet()) {
 					if (wordEntry.getKey() == wordId) {
-						for (Map.Entry<Integer, Integer> docEntry : wordEntry.getValue().entrySet()) {
-							for (Map.Entry<String, Integer> fileEntry : readInputFiles.fileDict.entrySet()) {
+						for (Entry<Integer, Integer> docEntry : wordEntry.getValue().entrySet()) {
+							for (Entry<String, Integer> fileEntry : readInputFiles.fileDict.entrySet()) {
 								if (docEntry.getKey().equals(fileEntry.getValue())) {
 									System.out.println("The document the word after stemming " + searchTerm
 											+ " is present in " + fileEntry.getKey() + " and freq. count is "
@@ -255,7 +344,7 @@ public class ReadInputFiles implements InformationRetrivealInterface {
 	 *            path to the stop words
 	 */
 	@Override
-	public void loadStopList(final String stopListPath) {
+	public List<String> loadStopList(final String stopListPath) {
 		BufferedReader reader = null;
 		try {
 			reader = new BufferedReader(new FileReader(stopListPath));
@@ -268,6 +357,7 @@ public class ReadInputFiles implements InformationRetrivealInterface {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return stopList;
 	}
 
 	/**

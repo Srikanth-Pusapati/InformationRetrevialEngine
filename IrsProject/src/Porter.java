@@ -1,12 +1,3 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.Collator;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
 /* author:   Fotis Lazarinis (actually I translated from C to Java)
    date:     June 1997
    address:  Psilovraxou 12, Agrinio, 30100

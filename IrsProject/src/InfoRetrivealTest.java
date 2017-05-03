@@ -18,7 +18,9 @@ public class InfoRetrivealTest {
 		System.out.println("Parsing the new content");
 
 		readInputFiles.loadData(dataPath);
-		readInputFiles.readInputFromUser(readInputFiles, scanner);
+		System.out.print("Enter your word to search: ");
+		String searchTerm = scanner.nextLine();
+		readInputFiles.readInputFromUser(readInputFiles, searchTerm);
 		scanner.close();
 
 	}
